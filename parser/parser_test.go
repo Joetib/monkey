@@ -501,6 +501,61 @@ func TestIfElseExpression(t *testing.T) {
 	}
 }
 
+func TestClassParsing(t *testing.T) {
+	input := `class Kofi(x, y) {fn(){}}`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Body does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.Statement. got=%T",
+			program.Statements[0])
+	}
+
+	cls, ok := stmt.Expression.(*ast.ClassStatement)
+	if !ok {
+		t.Fatalf("stmt.Statement is not ast.ClassStatement. got=%T",
+			stmt.Expression)
+	}
+
+	if len(cls.Parents) != 2 {
+		t.Fatalf("class statement  parents wrong. want 2, got=%d\n", len(cls.Parents))
+	}
+	parents := []string{"x", "y"}
+	for key, value := range cls.Parents {
+		if value.String() != parents[key] {
+			t.Fatalf("Parent at %d not the same. Expected %s got %s", key, parents[key], value.String())
+		}
+
+	}
+	testLiteralExpression(t, cls.Parents[0], "x")
+	testLiteralExpression(t, cls.Parents[1], "y")
+
+	if len(cls.Body.Statements) != 1 {
+		t.Fatalf("cls.Body.Statements has not 1 statements. got=%d\n",
+			len(cls.Body.Statements))
+	}
+
+	bodyStmt, ok := cls.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("cls body stmt is not ast.ExpressionStatement. got=%T",
+			cls.Body.Statements[0])
+	}
+	_, ok = bodyStmt.Expression.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("cls.Body.Statement[0] is not a function. got=%T", bodyStmt)
+	}
+
+}
+
 func TestFunctionLiteralParsing(t *testing.T) {
 	input := `fn(x, y) { x + y; }`
 

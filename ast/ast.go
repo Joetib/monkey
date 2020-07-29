@@ -424,3 +424,63 @@ func (hl *HashLiteral) String() string {
 	out.WriteString("}")
 	return out.String()
 }
+
+//ClassStatement : Node for class statements
+// eg. let a = 12;
+type ClassStatement struct {
+	Token token.Token // the token.CLASS token
+	// the name of the class
+	Name    *Identifier
+	Parents []*Identifier
+	Body    *BlockStatement
+}
+
+//statementNode : implementer of Statement interface
+func (Cs *ClassStatement) statementNode() {}
+
+//expressionNode implementer
+func (Cs *ClassStatement) expressionNode() {}
+
+//TokenLiteral : a string representation of the token.LET statement
+func (Cs *ClassStatement) TokenLiteral() string { return Cs.Token.Literal }
+
+//String : returns string representation of Node
+func (Cs *ClassStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString(Cs.TokenLiteral() + " ")
+	out.WriteString(Cs.Name.String())
+	parents := []string{}
+	for _, i := range Cs.Parents {
+		parents = append(parents, i.String())
+	}
+	out.WriteString("(")
+	out.WriteString(strings.Join(parents, ", "))
+	out.WriteString(") {")
+	out.WriteString(Cs.Body.String())
+	out.WriteString("}")
+	return out.String()
+
+}
+
+//ImportStatement : statement Node to handle import statements
+// eg. return 5;
+type ImportStatement struct {
+	Token token.Token // the token.IMPORT token
+	Value *StringLiteral
+}
+
+//expressionNode implementation of Node interface
+func (Is *ImportStatement) expressionNode() {}
+
+//TokenLiteral : returns 'return' string from token
+// a string representation of token.RETURN token
+func (Is *ImportStatement) TokenLiteral() string { return Is.Token.Literal }
+
+//String : returns string representation of Node
+func (Is *ImportStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString(Is.TokenLiteral() + " ")
+	out.WriteString(Is.Value.String())
+	out.WriteString(";")
+	return out.String()
+}

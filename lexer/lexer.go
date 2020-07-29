@@ -33,6 +33,8 @@ func (l *Lexer) NextToken() token.Token {
 
 	case ';':
 		tok = newToken(token.SEMICOLON, l.ch)
+	case '.':
+		tok = newToken(token.DOT, l.ch)
 	case '(':
 		tok = newToken(token.LPAREN, l.ch)
 	case ')':
@@ -136,7 +138,10 @@ func (l *Lexer) readNumber() string {
 //readIdentifier : Read a string
 func (l *Lexer) readIdentifier() string {
 	position := l.position
-	for isLetter(l.ch) {
+	// This method will never be called if the first character
+	// was not a letter so we're safe
+	// supposedly :-)
+	for isLetter(l.ch) || isDigit(l.ch) {
 		l.readChar()
 	}
 	return l.input[position:l.position]

@@ -6,6 +6,16 @@ type Environment struct {
 	outer *Environment
 }
 
+//SetOuter sets a value for the outer field of an environment
+func (e *Environment) SetOuter(env *Environment) {
+	e.outer = env
+}
+
+//GetOuter returns the value of the outer field of an environment
+func (e *Environment) GetOuter() *Environment {
+	return e.outer
+}
+
 //Get gets the value associated with a key in the environment store
 func (e *Environment) Get(name string) (Object, bool) {
 	obj, ok := e.store[name]
@@ -13,6 +23,11 @@ func (e *Environment) Get(name string) (Object, bool) {
 		obj, ok = e.outer.Get(name)
 	}
 	return obj, ok
+}
+
+//Closed makes a copy of the environment excluding the outer
+func (e *Environment) Closed() *Environment {
+	return &Environment{store: e.store, outer: nil}
 }
 
 //Set sets an entry to the environment's store

@@ -24,6 +24,7 @@ const (
 	GTE      = ">="
 	EQ       = "=="
 	NOT_EQ   = "!="
+	DOT      = "."
 
 	// DELIMITERS
 
@@ -46,6 +47,8 @@ const (
 	IF       = "IF"
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
+	IMPORT   = "IMPORT"
+	CLASS    = "CLASS"
 )
 
 //keywords : A map that contains a list of all keywords
@@ -57,6 +60,8 @@ var keywords = map[string]TokenType{
 	"if":     IF,
 	"else":   ELSE,
 	"return": RETURN,
+	"class":  CLASS,
+	"import": IMPORT,
 }
 
 //LookupIdent : Checks if an identifier string is a keyword

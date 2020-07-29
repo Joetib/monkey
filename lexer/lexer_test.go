@@ -7,7 +7,8 @@ import (
 )
 
 func TestNextToken(t *testing.T) {
-	input := `let five = 5;
+	input := `class Kofi{}
+let five = 5;
 let ten = 10;
 
 let add = fn(x, y) {
@@ -32,6 +33,10 @@ if (5 < 10) {
 		expectedType    token.TokenType
 		expectedLiteral string
 	}{
+		{token.CLASS, "class"},
+		{token.IDENT, "Kofi"},
+		{token.LBRACE, "{"},
+		{token.RBRACE, "}"},
 		{token.LET, "let"},
 		{token.IDENT, "five"},
 		{token.ASSIGN, "="},

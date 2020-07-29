@@ -11,16 +11,19 @@ import (
 type ObjectType string
 
 const (
-	INTEGER_OBJ      = "INTEGER"
-	BOOOLEAN_OBJ     = "BOOLEAN"
-	NULL_OBJ         = "NULL"
-	RETURN_VALUE_OBJ = "RETURN_VALUE"
-	FUNCTION_OBJ     = "FUNCTION"
-	STRING_OBJ       = "STRING"
-	ERROR_OBJ        = "ERROR"
-	BUILTIN_OBJ      = "BUILTIN"
-	ARRAY_OBJ        = "ARRAY"
-	HASH_OBJ         = "HASH"
+	INTEGER_OBJ       = "INTEGER"
+	BOOOLEAN_OBJ      = "BOOLEAN"
+	NULL_OBJ          = "NULL"
+	RETURN_VALUE_OBJ  = "RETURN_VALUE"
+	FUNCTION_OBJ      = "FUNCTION"
+	STRING_OBJ        = "STRING"
+	ERROR_OBJ         = "ERROR"
+	BUILTIN_OBJ       = "BUILTIN"
+	ARRAY_OBJ         = "ARRAY"
+	HASH_OBJ          = "HASH"
+	CLASS_OBJ         = "CLASS"
+	CLASSINSTANCE_OBJ = "CLASS_INSTANCE"
+	MODULE_OBJ        = "MODULE"
 )
 
 type Object interface {
@@ -217,3 +220,40 @@ func (h *Hash) Inspect() string {
 
 	return out.String()
 }
+
+//Class Base handler for class
+type Class struct {
+	Parents []*Class
+	Name    string
+	Env     *Environment
+}
+
+//Type returns the type of the object
+func (C *Class) Type() ObjectType { return CLASS_OBJ }
+
+//Inspect returns a string representation of the node
+func (C *Class) Inspect() string { return "class " + C.Name }
+
+//ClassInstance an instance of a class
+type ClassInstance struct {
+	Name string
+	Env  *Environment
+}
+
+//Type returns the type of the object
+func (Ci *ClassInstance) Type() ObjectType { return CLASSINSTANCE_OBJ }
+
+//Inspect returns a string representation of the node
+func (Ci *ClassInstance) Inspect() string { return "<Instance of Class " + Ci.Name + ">" }
+
+//Module Base handler for class
+type Module struct {
+	Name string
+	Env  *Environment
+}
+
+//Type returns the type of the object
+func (M *Module) Type() ObjectType { return MODULE_OBJ }
+
+//Inspect returns a string representation of the node
+func (M *Module) Inspect() string { return "module " + M.Name }

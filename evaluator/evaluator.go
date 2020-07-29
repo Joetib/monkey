@@ -2,8 +2,11 @@ package evaluator
 
 import (
 	"fmt"
+	"io/ioutil"
 	"monkey/ast"
+	"monkey/lexer"
 	"monkey/object"
+	"monkey/parser"
 )
 
 var (
@@ -38,6 +41,16 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalProgram(node, env)
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
+	case *ast.ImportStatement:
+		module := evalImportStatement(node.Value.String(), env)
+		if isError(module) {
+			return module
+		}
+		moduleObj, ok := module.(*object.Module)
+		if ok {
+			env.Set(moduleObj.Name, module)
+		}
+
 	case *ast.LetStatement:
 		val := Eval(node.Value, env)
 		if isError(val) {
@@ -77,6 +90,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return evalPrefixExpression(node.Operator, right, env)
 	case *ast.InfixExpression:
+		if node.Operator == "." {
+			left := Eval(node.Left, env)
+			if isError(left) {
+				return left
+			}
+			return evalDotInfixExpression(left, node.Right, env)
+		}
 		left := Eval(node.Left, env)
 		if isError(left) {
 			return left
@@ -94,6 +114,24 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		params := node.Parameters
 		body := node.Body
 		return &object.Function{Parameters: params, Env: env, Body: body}
+	case *ast.ClassStatement:
+		parents := []*object.Class{}
+		for _, value := range node.Parents {
+			pResult := Eval(value, env)
+			cls, ok := pResult.(*object.Class)
+			if !ok {
+				return &object.Error{Message: fmt.Sprintf("parent to be inherited from must be a class. got %T", pResult)}
+			}
+			parents = append(parents, cls)
+		}
+
+		newEnv := object.NewEnclosedEnvironment(env)
+		// Let every statement in the block get its environment from outside the class,
+		// this hides instance variables and methods
+		evalClassBlockStatement(node.Body, newEnv)
+		class := &object.Class{Parents: parents, Name: node.Name.String(), Env: newEnv}
+		env.Set(class.Name, class)
+		return class
 	case *ast.CallExpression:
 		function := Eval(node.Function, env)
 		if isError(function) {
@@ -112,6 +150,29 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.ReturnValue{Value: val}
 	}
 	return nil
+}
+
+//evalImportStatement evaluates an import statement
+func evalImportStatement(Name string, env *object.Environment) object.Object {
+	content, err := ioutil.ReadFile(Name + ".monkey")
+	if err != nil {
+		fmt.Printf("Could not open file : %s", Name)
+		panic(err)
+	}
+	newEnv := object.NewEnvironment()
+	l := lexer.New(string(content))
+	p := parser.New(l)
+	program := p.ParseProgram()
+	if len(p.Errors()) != 0 {
+		errorMessage := ""
+		for _, er := range p.Errors() {
+			errorMessage = errorMessage + er
+		}
+		return &object.Error{Message: errorMessage}
+	}
+	Eval(program, newEnv)
+	module := &object.Module{Env: newEnv, Name: Name}
+	return module
 }
 
 //evalProgram evaluate a list of statements
@@ -186,6 +247,8 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		extendedEnv := extendFunctionEnv(fn, args)
 		evaluated := Eval(fn.Body, extendedEnv)
 		return unwrapReturnValue(evaluated)
+	case *object.Class:
+		return &object.ClassInstance{Name: fn.Name, Env: fn.Env}
 	default:
 		return newError("not a function: %s", fn.Type())
 	}
@@ -366,6 +429,129 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 		return evalStringInfixExpression(operator, left, right)
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+}
+
+//evalDotInfixOperation evaluates a method
+func evalDotInfixExpression(left object.Object, right ast.Node, env *object.Environment) object.Object {
+	switch left.(type) {
+	case *object.ClassInstance:
+		left, ok := left.(*object.ClassInstance)
+		if !ok {
+			return nil
+		}
+		return evalClassDotOperation(left, right, env)
+	case *object.Module:
+		left, ok := left.(*object.Module)
+		if !ok {
+			return nil
+		}
+		return evalModuleDotOperation(left, right, env)
+	default:
+		return &object.Error{Message: fmt.Sprintf("Dot operation not supported for %T", left.Type())}
+	}
+}
+
+//evalClassBlockStatement evaluates a block of statements.
+// this is implemented different from evaluate program so we can handle return statements
+// properly. See page 130 of the book `writing an interpreter in go` for explanation
+func evalClassBlockStatement(block *ast.BlockStatement, env *object.Environment) object.Object {
+	var result object.Object
+
+	for _, statement := range block.Statements {
+		result = Eval(statement, env)
+		if result != nil {
+			rt := result.Type()
+			if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ {
+				return result
+			}
+			if rt == object.FUNCTION_OBJ {
+				fn, ok := result.(*object.Function)
+				if ok {
+					fn.Env.SetOuter(env.GetOuter())
+				}
+			}
+		}
+	}
+	// this line allows return last values in a block of code
+	// even though it does not explicitly use the return keyword
+	// to avoid this behaviour, and return NULL instead, replace this
+	// line with
+	// return NULL
+	return result
+}
+
+//evalModuleDotOperator evaluates dot operation between and object
+func evalModuleDotOperation(left *object.Module, right ast.Node, env *object.Environment) object.Object {
+	switch right.(type) {
+	case *ast.CallExpression:
+		right, ok := right.(*ast.CallExpression)
+		if !ok {
+			return nil
+		}
+		function := Eval(right.Function, left.Env.Closed())
+		if isError(function) {
+			return function
+		}
+		args := evalExpressions(right.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+		return applyFunction(function, args)
+
+	case *ast.Identifier:
+		return Eval(right, left.Env.Closed())
+	default:
+		return &object.Error{Message: "Cannot perform Dot operation"}
+	}
+
+}
+
+//evalClassDotOperator evaluates dot operation between and object
+func evalClassDotOperation(left *object.ClassInstance, right ast.Node, env *object.Environment) object.Object {
+	switch right.(type) {
+	case *ast.CallExpression:
+		right, ok := right.(*ast.CallExpression)
+		if !ok {
+			return nil
+		}
+		function := Eval(right.Function, left.Env.Closed())
+		if isError(function) {
+			return function
+		}
+		args := evalExpressions(right.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+		return applyMethod(function, left, args)
+	case *ast.Identifier:
+		return Eval(right, left.Env.Closed())
+	default:
+		return &object.Error{Message: "Cannot perform Dot operation"}
+	}
+}
+
+//applyMethod runs a function call
+func applyMethod(fn object.Object, left object.Object, args []object.Object) object.Object {
+	switch fn := fn.(type) {
+	//check whether the function is a builtin function first.
+	// this is done first so that the end user cannot overide builtin objects
+	// if this check is done second, then the user defined objects will have precedence
+	// over builtin types.
+	// this is a little deviation of my own from original monkey representation
+	// where user defined values have more precedence over builtin types
+
+	case *object.Function:
+		extendedEnv := extendFunctionEnv(fn, args)
+		class, ok := left.(*object.ClassInstance)
+		if ok {
+			extendedEnv.Set("self", class)
+		}
+		evaluated := Eval(fn.Body, extendedEnv)
+		return unwrapReturnValue(evaluated)
+
+	default:
+		return newError("not a function: %s", fn.Type())
 	}
 }
 

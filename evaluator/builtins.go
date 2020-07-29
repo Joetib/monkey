@@ -99,4 +99,44 @@ var builtins = map[string]*object.Builtin{
 			return NULL
 		},
 	},
+	"hasattr": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("wrong number of arguments. got=%d, want=2", len(args))
+			}
+			left, ok := args[0].(*object.ClassInstance)
+			if !ok {
+				return newError("Argument 1 must be a `CLASSINSTANCE`")
+			}
+			right, ok := args[0].(*object.String)
+			if !ok {
+				return newError("Argument 2 must be a `STRING`")
+			}
+			_, ok = left.Env.Closed().Get(right.Inspect())
+			if ok {
+				return TRUE
+			}
+			return FALSE
+
+		},
+	},
+	"setattr": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 3 {
+				return newError("wrong number of arguments. got=%d, want=2", len(args))
+			}
+			left, ok := args[0].(*object.ClassInstance)
+			if !ok {
+				return newError("Argument 1 must be a `CLASSINSTANCE`")
+			}
+			right, ok := args[1].(*object.String)
+			if !ok {
+				return newError("Argument 2 must be a `STRING`")
+			}
+			left.Env.Set(right.Inspect(), args[2])
+			fmt.Println(left.Env.Get(right.Inspect()))
+			return args[2]
+
+		},
+	},
 }

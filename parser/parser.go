@@ -16,6 +16,7 @@ const (
 	SUM         // +  or -
 	PRODUCT     // *
 	PREFIX      // -X or !X
+	DOT         // .
 	CALL        //myFunction(X)
 	INDEX       //myArray[index]
 )
@@ -29,6 +30,7 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
 	token.ASTERISK: PRODUCT,
+	token.DOT:      DOT,
 	token.LPAREN:   CALL,
 	token.LBRACKET: INDEX,
 }
@@ -291,6 +293,49 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 	return lit
 }
 
+//parseClassLiteral parse a class block and return a FunctionLiteral Node
+func (p *Parser) parseClassLiteral() ast.Expression {
+	cls := &ast.ClassStatement{Token: p.curToken}
+
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+	result := p.parseIdentifier()
+	ident, ok := result.(*ast.Identifier)
+	if !ok {
+		return nil
+	}
+	cls.Name = ident
+	parents := []*ast.Identifier{}
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	for !p.peekTokenIs(token.RPAREN) && !p.peekTokenIs(token.EOF) {
+		p.nextToken()
+		identResult := p.parseIdentifier()
+		ident, ok := identResult.(*ast.Identifier)
+		if !ok {
+			return nil
+		}
+
+		if p.peekTokenIs(token.COMMA) {
+			p.nextToken()
+		}
+
+		parents = append(parents, ident)
+	}
+	p.nextToken()
+	fmt.Println(parents)
+	cls.Parents = parents
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	cls.Body = p.parseBlockStatement()
+
+	return cls
+}
+
 func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 	identifiers := []*ast.Identifier{}
 
@@ -452,6 +497,25 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	return stmt
 }
 
+//parseImportStatement : construct a ReturnStatement Node
+func (p *Parser) parseImportStatement() ast.Expression {
+	stmt := &ast.ImportStatement{Token: p.curToken}
+
+	if !p.expectPeek(token.STRING) {
+		return nil
+	}
+	importValue := p.parseExpression(LOWEST)
+	Value, ok := importValue.(*ast.StringLiteral)
+	if !ok {
+		return nil
+	}
+	stmt.Value = Value
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return stmt
+}
+
 //parseReturnStatement : construct a ReturnStatement Node
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
@@ -487,11 +551,14 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.registerPrefix(token.LBRACE, p.parseHashLiteral)
+	p.registerPrefix(token.CLASS, p.parseClassLiteral)
+	p.registerPrefix(token.IMPORT, p.parseImportStatement)
 
 	// Infix expressions
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 
 	//register infix parse functions
+	p.registerInfix(token.DOT, p.parseInfixExpression)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
 	p.registerInfix(token.SLASH, p.parseInfixExpression)
