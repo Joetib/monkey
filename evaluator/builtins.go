@@ -6,6 +6,38 @@ import (
 )
 
 var builtins = map[string]*object.Builtin{
+	"str": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("wrong number of arguments. to str got=%d, want=1", len(args))
+			}
+
+			return &object.String{Value: args[0].Inspect()}
+
+		},
+	},
+	"env": &object.Builtin{
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("wrong number of arguments. to str got=%d, want=1", len(args))
+			}
+			obj := args[0]
+			switch obj.(type) {
+			case *object.ClassInstance:
+				newObj, _ := obj.(*object.ClassInstance)
+				fmt.Println(newObj.Env)
+			case *object.Class:
+				newObj, _ := obj.(*object.Class)
+				fmt.Println(newObj.Env)
+			case *object.Module:
+				newObj, _ := obj.(*object.Module)
+				fmt.Println(newObj.Env)
+			default:
+				fmt.Println("Error : >>> Object has no Env")
+			}
+			return NULL
+		},
+	},
 	"len": &object.Builtin{
 		Fn: func(args ...object.Object) object.Object {
 			if len(args) != 1 {

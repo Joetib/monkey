@@ -16,6 +16,17 @@ func (e *Environment) GetOuter() *Environment {
 	return e.outer
 }
 
+//shallowCopy  copies the values in an environment to another
+func (e *Environment) ShallowCopy(env *Environment) *Environment {
+	for key, value := range env.store {
+		if _, ok := e.Get(key); ok {
+			continue
+		}
+		e.Set(key, value)
+	}
+	return e
+}
+
 //Get gets the value associated with a key in the environment store
 func (e *Environment) Get(name string) (Object, bool) {
 	obj, ok := e.store[name]

@@ -56,11 +56,33 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(val) {
 			return val
 		}
-		env.Set(node.Name.Value, val)
+		if node.Property != nil {
+			property, ok := node.Property.(*ast.Identifier)
+			if !ok {
+				return newError("Error converting node.Property into an *ast.Identifier")
+			}
+			cls, ok := env.Get(node.Name.Value)
+			if !ok {
+				return newError("unknown identifier: %s", node.Name.Value)
+			}
+			classInstance, ok := cls.(*object.ClassInstance)
+			if !ok {
+				return newError("Dot assignment allowed only on class Instances.Cannot use dot assignment on %T: %s", cls, node.Name.Value)
+			}
+			_, ok = classInstance.Env.Get(property.Value)
+			if !ok {
+				return newError("%s is not an instance variable of class %s", property.Value, cls.Inspect())
+			}
+			classInstance.Env.Set(property.Value, val)
+		} else {
+			env.Set(node.Name.Value, val)
+		}
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
+	case *ast.FloatLiteral:
+		return &object.Float{Value: node.Value}
 	case *ast.Boolean:
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.StringLiteral:
@@ -111,25 +133,23 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 	case *ast.FunctionLiteral:
-		params := node.Parameters
-		body := node.Body
-		return &object.Function{Parameters: params, Env: env, Body: body}
+		return &object.Function{Parameters: node.Parameters, Env: env, Body: node.Body}
 	case *ast.ClassStatement:
-		parents := []*object.Class{}
+		newEnv := object.NewEnclosedEnvironment(env)
 		for _, value := range node.Parents {
 			pResult := Eval(value, env)
 			cls, ok := pResult.(*object.Class)
 			if !ok {
 				return &object.Error{Message: fmt.Sprintf("parent to be inherited from must be a class. got %T", pResult)}
 			}
-			parents = append(parents, cls)
+			newEnv.ShallowCopy(cls.Env)
 		}
 
-		newEnv := object.NewEnclosedEnvironment(env)
 		// Let every statement in the block get its environment from outside the class,
 		// this hides instance variables and methods
 		evalClassBlockStatement(node.Body, newEnv)
-		class := &object.Class{Parents: parents, Name: node.Name.String(), Env: newEnv}
+
+		class := &object.Class{Name: node.Name.String(), Env: newEnv}
 		env.Set(class.Name, class)
 		return class
 	case *ast.CallExpression:
@@ -248,7 +268,14 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		evaluated := Eval(fn.Body, extendedEnv)
 		return unwrapReturnValue(evaluated)
 	case *object.Class:
-		return &object.ClassInstance{Name: fn.Name, Env: fn.Env}
+		cls := &object.ClassInstance{Name: fn.Name, Env: fn.Env}
+		if value, ok := cls.Env.Get("__New__"); ok {
+			if value.Type() == object.FUNCTION_OBJ {
+				function, _ := value.(*object.Function)
+				applyMethod(function, cls, args)
+			}
+		}
+		return cls
 	default:
 		return newError("not a function: %s", fn.Type())
 	}
@@ -419,6 +446,11 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 	switch {
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalIntegerInfixExpression(operator, left, right)
+	case left.Type() == object.FLOAT_OBJ && right.Type() == object.FLOAT_OBJ:
+		return evalFloatInfixExpression(operator, left, right)
+
+	case (left.Type() == object.FLOAT_OBJ && right.Type() == object.INTEGER_OBJ) || (right.Type() == object.FLOAT_OBJ && right.Type() == object.FLOAT_OBJ):
+		return evalFloatIntegerInfixExpression(operator, left, right)
 	case operator == "==":
 		return nativeBoolToBooleanObject(left == right)
 	case operator == "!=":
@@ -467,7 +499,13 @@ func evalClassBlockStatement(block *ast.BlockStatement, env *object.Environment)
 			}
 			if rt == object.FUNCTION_OBJ {
 				fn, ok := result.(*object.Function)
+
 				if ok {
+					// Set the outer Environment to the outside of class
+					// this way, class methods only see what is outside the class
+					// not what is inside the class
+					// This means that class methods can only access instance or class
+					// properties from the self variable
 					fn.Env.SetOuter(env.GetOuter())
 				}
 			}
@@ -567,7 +605,69 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
 	case "*":
 		return &object.Integer{Value: leftVal * rightVal}
 	case "/":
-		return &object.Integer{Value: leftVal / rightVal}
+		return &object.Float{Value: float64(leftVal) / float64(rightVal)}
+	case "<":
+		return nativeBoolToBooleanObject(leftVal < rightVal)
+	case ">":
+		return nativeBoolToBooleanObject(leftVal > rightVal)
+	case "==":
+		return nativeBoolToBooleanObject(leftVal == rightVal)
+	case "!=":
+		return nativeBoolToBooleanObject(leftVal != rightVal)
+	default:
+		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+}
+
+//evalFloatInfixExpression evaluates infix expressions where both operands are floats
+func evalFloatInfixExpression(operator string, left, right object.Object) object.Object {
+	leftVal := left.(*object.Float).Value
+	rightVal := right.(*object.Float).Value
+	switch operator {
+	case "+":
+		return &object.Float{Value: leftVal + rightVal}
+	case "-":
+		return &object.Float{Value: leftVal - rightVal}
+	case "*":
+		return &object.Float{Value: leftVal * rightVal}
+	case "/":
+		return &object.Float{Value: leftVal / rightVal}
+	case "<":
+		return nativeBoolToBooleanObject(leftVal < rightVal)
+	case ">":
+		return nativeBoolToBooleanObject(leftVal > rightVal)
+	case "==":
+		return nativeBoolToBooleanObject(leftVal == rightVal)
+	case "!=":
+		return nativeBoolToBooleanObject(leftVal != rightVal)
+	default:
+		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+}
+
+//evalFloatInfixExpression evaluates infix expressions where both operands are floats
+func evalFloatIntegerInfixExpression(operator string, left, right object.Object) object.Object {
+	var leftVal float64
+	var rightVal float64
+	if left.Type() == object.INTEGER_OBJ {
+		leftVal = float64(left.(*object.Integer).Value)
+	} else {
+		leftVal = left.(*object.Float).Value
+	}
+	if right.Type() == object.INTEGER_OBJ {
+		rightVal = float64(right.(*object.Integer).Value)
+	} else {
+		rightVal = right.(*object.Float).Value
+	}
+	switch operator {
+	case "+":
+		return &object.Float{Value: leftVal + rightVal}
+	case "-":
+		return &object.Float{Value: leftVal - rightVal}
+	case "*":
+		return &object.Float{Value: leftVal * rightVal}
+	case "/":
+		return &object.Float{Value: leftVal / rightVal}
 	case "<":
 		return nativeBoolToBooleanObject(leftVal < rightVal)
 	case ">":

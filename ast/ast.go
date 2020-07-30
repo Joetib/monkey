@@ -69,8 +69,9 @@ type LetStatement struct {
 	Token token.Token // the token.LET token
 	//iName : this is a statement because identifiers in other
 	//parts of the language produce value
-	Name  *Identifier
-	Value Expression
+	Name     *Identifier
+	Property Expression
+	Value    Expression
 }
 
 //statementNode : implementer of Statement interface
@@ -84,6 +85,10 @@ func (ls *LetStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(ls.TokenLiteral() + " ")
 	out.WriteString(ls.Name.String())
+	if ls.Property != nil {
+		out.WriteString(".")
+		out.WriteString(ls.Property.String())
+	}
 
 	if ls.Value != nil {
 		out.WriteString(" = ")
@@ -152,6 +157,21 @@ func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 
 //String : returns string representation of Node
 func (il *IntegerLiteral) String() string { return il.Token.Literal }
+
+//FloatLiteral : Node for holding integers
+type FloatLiteral struct {
+	Token token.Token
+	Value float64
+}
+
+//expressionNode interface implementation for Expression Interface
+func (fl *FloatLiteral) expressionNode() {}
+
+//TokenLiteral : a string representation of the expressionstatement node
+func (fl *FloatLiteral) TokenLiteral() string { return fl.Token.Literal }
+
+//String : returns string representation of Node
+func (fl *FloatLiteral) String() string { return fl.Token.Literal }
 
 //PrefixExpression Node for all prefix expressions
 // <prefix><expression>

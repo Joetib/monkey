@@ -206,6 +206,19 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	return lit
 }
 
+//parseFloatLiteral : parse and create an IntegerLiteral Node
+func (p *Parser) parseFloatLiteral() ast.Expression {
+	lit := &ast.FloatLiteral{Token: p.curToken}
+	value, err := strconv.ParseFloat(p.curToken.Literal, 64)
+	if err != nil {
+		msg := fmt.Sprintf("Could not parsse %q as float", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	lit.Value = value
+	return lit
+}
+
 //parsePrefixExpression : parses and creates a PrefixExpression Node
 func (p *Parser) parsePrefixExpression() ast.Expression {
 	expression := &ast.PrefixExpression{
@@ -326,7 +339,6 @@ func (p *Parser) parseClassLiteral() ast.Expression {
 		parents = append(parents, ident)
 	}
 	p.nextToken()
-	fmt.Println(parents)
 	cls.Parents = parents
 	if !p.expectPeek(token.LBRACE) {
 		return nil
@@ -485,7 +497,13 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 		return nil
 	}
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-
+	if p.peekTokenIs(token.DOT) {
+		p.nextToken()
+		if !p.expectPeek(token.IDENT) {
+			return nil
+		}
+		stmt.Property = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	}
 	if !p.expectPeek(token.ASSIGN) {
 		return nil
 	}
@@ -541,6 +559,7 @@ func New(l *lexer.Lexer) *Parser {
 	// register all prefix functions
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
+	p.registerPrefix(token.FLOAT, p.parseFloatLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(token.TRUE, p.parseBoolean)

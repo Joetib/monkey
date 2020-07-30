@@ -7,10 +7,12 @@ let print = fn(arg) {
 let x = "Kofi is a boy";
 
 class Player(){
+    let oldVelocity = 0
     let play = fn (){
         print("Player is playing the ball");
     }
     let speedUp = fn (newVelocity) {
-        print("Speeding up to ", newVelocity);
+        let self.oldVelocity = self.oldVelocity + newVelocity;
+        puts("Speeding up to "+ str(self.oldVelocity));
     }
 }

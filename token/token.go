@@ -49,6 +49,7 @@ const (
 	RETURN   = "RETURN"
 	IMPORT   = "IMPORT"
 	CLASS    = "CLASS"
+	FLOAT    = "FLOAT"
 )
 
 //keywords : A map that contains a list of all keywords

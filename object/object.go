@@ -12,6 +12,7 @@ type ObjectType string
 
 const (
 	INTEGER_OBJ       = "INTEGER"
+	FLOAT_OBJ         = "FLOAT"
 	BOOOLEAN_OBJ      = "BOOLEAN"
 	NULL_OBJ          = "NULL"
 	RETURN_VALUE_OBJ  = "RETURN_VALUE"
@@ -52,7 +53,23 @@ func (i *Integer) Type() ObjectType { return INTEGER_OBJ }
 
 //HashKey function to generate a HashKey object from a Integer
 func (i *Integer) HashKey() HashKey {
-	return HashKey{Type: i.Type(), Value: uint64(i.Value)}
+	return HashKey{Type: i.Type(), Value: float64(i.Value)}
+}
+
+//Float object to hold integers
+type Float struct {
+	Value float64
+}
+
+//Inspect returns a string representation of the object
+func (f *Float) Inspect() string { return fmt.Sprintf("%f", f.Value) }
+
+//Type returns the type of the object
+func (f *Float) Type() ObjectType { return FLOAT_OBJ }
+
+//HashKey function to generate a HashKey object from a Integer
+func (f *Float) HashKey() HashKey {
+	return HashKey{Type: f.Type(), Value: float64(f.Value)}
 }
 
 //Boolean object to hold boolean values true and false
@@ -68,7 +85,7 @@ func (b *Boolean) Type() ObjectType { return BOOOLEAN_OBJ }
 
 //HashKey function to generate a HashKey object from a boolean
 func (b *Boolean) HashKey() HashKey {
-	var value uint64
+	var value float64
 	if b.Value {
 		value = 1
 	} else {
@@ -151,7 +168,7 @@ func (s *String) Inspect() string { return s.Value }
 func (s *String) HashKey() HashKey {
 	h := fnv.New64a()
 	h.Write([]byte(s.Value))
-	return HashKey{Type: s.Type(), Value: h.Sum64()}
+	return HashKey{Type: s.Type(), Value: float64(h.Sum64())}
 }
 
 //Builtin node representation of all builtin functions and objects
@@ -190,7 +207,7 @@ func (ao *Array) Inspect() string {
 //HashKey node representation of hash objects keys
 type HashKey struct {
 	Type  ObjectType
-	Value uint64
+	Value float64
 }
 
 //HashPair a pair of entries in a hashmap
@@ -223,9 +240,8 @@ func (h *Hash) Inspect() string {
 
 //Class Base handler for class
 type Class struct {
-	Parents []*Class
-	Name    string
-	Env     *Environment
+	Name string
+	Env  *Environment
 }
 
 //Type returns the type of the object
