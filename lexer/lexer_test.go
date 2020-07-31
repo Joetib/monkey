@@ -8,6 +8,7 @@ import (
 
 func TestNextToken(t *testing.T) {
 	input := `class Kofi{}
+	while(true){}
 let five = 5;
 let ten = 10;
 
@@ -35,6 +36,12 @@ if (5 < 10) {
 	}{
 		{token.CLASS, "class"},
 		{token.IDENT, "Kofi"},
+		{token.LBRACE, "{"},
+		{token.RBRACE, "}"},
+		{token.WHILE, "while"},
+		{token.LPAREN, "("},
+		{token.TRUE, "true"},
+		{token.RPAREN, ")"},
 		{token.LBRACE, "{"},
 		{token.RBRACE, "}"},
 		{token.LET, "let"},

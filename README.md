@@ -17,6 +17,7 @@ The monkey interpreter from reading the book `writing an interpreter in go` by T
 - Keyword arguments
 - Default values for arguments
 - More informative error messages with positions
+- while loop
 
 ## Running the code
 ----------------------------

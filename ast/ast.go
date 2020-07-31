@@ -287,11 +287,42 @@ func (ie *IfExpression) String() string {
 	out.WriteString("(")
 	out.WriteString(ie.Condition.String())
 	out.WriteString(")")
-	out.WriteString(" ")
+	out.WriteString("{")
+	out.WriteString(ie.Consequence.String())
+	out.WriteString("}")
 	if ie.Alternative != nil {
 		out.WriteString("else ")
 		out.WriteString(ie.Alternative.String())
 	}
+	return out.String()
+}
+
+//IfExpression Node for hoding if and if-else statements block
+type WhileExpression struct {
+	Token       token.Token //The 'if' token
+	Condition   Expression
+	Consequence *BlockStatement
+}
+
+//expressionNode interface implementation for Expression Interface
+func (we *WhileExpression) expressionNode() {}
+
+//TokenLiteral : a string representation of the expressionstatement node
+func (we *WhileExpression) TokenLiteral() string { return we.Token.Literal }
+
+//String : returns string representation of Node
+func (we *WhileExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("while")
+	out.WriteString("(")
+	out.WriteString(we.Condition.String())
+	out.WriteString(")")
+	out.WriteString(" {")
+
+	out.WriteString(we.Consequence.String())
+	out.WriteString(" }")
+
 	return out.String()
 }
 

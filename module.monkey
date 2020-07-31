@@ -16,3 +16,12 @@ class Player(){
         puts("Speeding up to "+ str(self.oldVelocity));
     }
 }
+
+let p = Player();
+puts(p.oldVelocity);
+let u = 3;
+let x = while(u < 5){
+    puts(u);
+    let u = u+1;
+}
+puts("ending", x);
