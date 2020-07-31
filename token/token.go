@@ -51,6 +51,7 @@ const (
 	CLASS    = "CLASS"
 	FLOAT    = "FLOAT"
 	WHILE    = "WHILE"
+	AS       = "AS"
 )
 
 //keywords : A map that contains a list of all keywords
@@ -65,6 +66,7 @@ var keywords = map[string]TokenType{
 	"class":  CLASS,
 	"import": IMPORT,
 	"while":  WHILE,
+	"as":     AS,
 }
 
 //LookupIdent : Checks if an identifier string is a keyword

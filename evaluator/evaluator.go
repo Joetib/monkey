@@ -42,7 +42,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
 	case *ast.ImportStatement:
-		module := evalImportStatement(node.Value.String(), env)
+		module := evalImportStatement(node.Value.String(), node.Alias, env)
 		if isError(module) {
 			return module
 		}
@@ -175,7 +175,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 //evalImportStatement evaluates an import statement
-func evalImportStatement(Name string, env *object.Environment) object.Object {
+func evalImportStatement(Name string, alias ast.Expression, env *object.Environment) object.Object {
 	content, err := ioutil.ReadFile(Name + ".monkey")
 	if err != nil {
 		fmt.Printf("Could not open file : %s", Name)
@@ -193,8 +193,12 @@ func evalImportStatement(Name string, env *object.Environment) object.Object {
 		return &object.Error{Message: errorMessage}
 	}
 	Eval(program, newEnv)
-	module := &object.Module{Env: newEnv, Name: Name}
-	return module
+	if alias != nil {
+		aliasString := alias.(*ast.StringLiteral).String()
+		return &object.Module{Env: newEnv, Name: aliasString}
+
+	}
+	return &object.Module{Env: newEnv, Name: Name}
 }
 
 //evalProgram evaluate a list of statements

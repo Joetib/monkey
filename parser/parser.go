@@ -526,6 +526,16 @@ func (p *Parser) parseImportStatement() ast.Expression {
 		return nil
 	}
 	stmt.Value = Value
+	if p.peekTokenIs(token.AS) {
+		p.nextToken()
+		p.expectPeek(token.STRING)
+		alias := p.parseExpression(LOWEST)
+		Value, ok := alias.(*ast.StringLiteral)
+		if !ok {
+			return nil
+		}
+		stmt.Alias = Value
+	}
 	if p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}

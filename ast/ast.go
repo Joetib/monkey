@@ -518,6 +518,7 @@ func (Cs *ClassStatement) String() string {
 type ImportStatement struct {
 	Token token.Token // the token.IMPORT token
 	Value *StringLiteral
+	Alias Expression
 }
 
 //expressionNode implementation of Node interface
@@ -532,6 +533,14 @@ func (Is *ImportStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(Is.TokenLiteral() + " ")
 	out.WriteString(Is.Value.String())
+	if Is.Alias != nil {
+		out.WriteString(" as ")
+		aliasString, ok := Is.Alias.(*StringLiteral)
+		if ok {
+			out.WriteString(aliasString.String())
+		}
+
+	}
 	out.WriteString(";")
 	return out.String()
 }

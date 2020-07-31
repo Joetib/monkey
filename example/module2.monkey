@@ -1,4 +1,4 @@
-import "module"
+import "example/module" as "module";
 
 let player1 = module.Player();
 player1.play()
