@@ -544,3 +544,21 @@ func (Is *ImportStatement) String() string {
 	out.WriteString(";")
 	return out.String()
 }
+
+//NullExpression : statement Node to handle null statements
+// eg. return 5;
+type NullExpression struct {
+	Token token.Token // the token.NULL token
+}
+
+//expressionNode implementation of Node interface
+func (Ne *NullExpression) expressionNode() {}
+
+//TokenLiteral : returns 'return' string from token
+// a string representation of token.RETURN token
+func (Ne *NullExpression) TokenLiteral() string { return Ne.Token.Literal }
+
+//String : returns string representation of Node
+func (Ne *NullExpression) String() string {
+	return Ne.Token.Literal
+}

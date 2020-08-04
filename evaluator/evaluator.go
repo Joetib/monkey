@@ -50,7 +50,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if ok {
 			env.Set(moduleObj.Name, module)
 		}
-
+	case *ast.NullExpression:
+		return NULL
 	case *ast.LetStatement:
 		val := Eval(node.Value, env)
 		if isError(val) {
@@ -159,6 +160,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(function) {
 			return function
 		}
+
 		args := evalExpressions(node.Arguments, env)
 		if len(args) == 1 && isError(args[0]) {
 			return args[0]
@@ -271,6 +273,7 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		return fn.Fn(args...)
 	case *object.Function:
 		extendedEnv := extendFunctionEnv(fn, args)
+
 		evaluated := Eval(fn.Body, extendedEnv)
 		return unwrapReturnValue(evaluated)
 	case *object.Class:
@@ -291,6 +294,9 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 // the environment where the function was created
 func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
 	env := object.NewEnclosedEnvironment(fn.Env)
+	for len(args) < len(fn.Parameters) {
+		args = append(args, NULL)
+	}
 	for paramIdx, param := range fn.Parameters {
 		env.Set(param.Value, args[paramIdx])
 	}

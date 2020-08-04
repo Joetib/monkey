@@ -206,6 +206,12 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	return lit
 }
 
+//parseNullExpression: parse and create a NullExpression Node
+func (p *Parser) parseNullExpression() ast.Expression {
+	return &ast.NullExpression{Token: p.curToken}
+
+}
+
 //parseFloatLiteral : parse and create an IntegerLiteral Node
 func (p *Parser) parseFloatLiteral() ast.Expression {
 	lit := &ast.FloatLiteral{Token: p.curToken}
@@ -566,6 +572,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	// register all prefix functions
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.NULL, p.parseNullExpression)
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.FLOAT, p.parseFloatLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)

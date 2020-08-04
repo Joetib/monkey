@@ -52,6 +52,7 @@ const (
 	FLOAT    = "FLOAT"
 	WHILE    = "WHILE"
 	AS       = "AS"
+	NULL     = "NULL"
 )
 
 //keywords : A map that contains a list of all keywords
@@ -67,6 +68,7 @@ var keywords = map[string]TokenType{
 	"import": IMPORT,
 	"while":  WHILE,
 	"as":     AS,
+	"null":   NULL,
 }
 
 //LookupIdent : Checks if an identifier string is a keyword
@@ -83,4 +85,6 @@ type TokenType string
 type Token struct {
 	Type    TokenType
 	Literal string
+	LineNo  int
+	CharNo  int
 }
