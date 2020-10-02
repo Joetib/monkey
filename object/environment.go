@@ -47,6 +47,14 @@ func (e *Environment) Set(name string, val Object) Object {
 	return val
 }
 
+//SetMultiple sets multiple key values to evironment's store
+func (e *Environment) SetMultiple(values map[string]Object) *Environment {
+	for key, value := range values {
+		e.store[key] = value
+	}
+	return e
+}
+
 //NewEnvironment Create and returns a new environment
 func NewEnvironment() *Environment {
 	s := make(map[string]Object)

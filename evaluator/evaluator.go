@@ -139,6 +139,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Function{Parameters: node.Parameters, Env: env, Body: node.Body}
 	case *ast.ClassStatement:
 		newEnv := object.NewEnclosedEnvironment(env)
+		newEnv.ShallowCopy(OBJECT.Env)
 		for _, value := range node.Parents {
 			pResult := Eval(value, env)
 			cls, ok := pResult.(*object.Class)
@@ -590,6 +591,8 @@ func applyMethod(fn object.Object, left object.Object, args []object.Object) obj
 	// over builtin types.
 	// this is a little deviation of my own from original monkey representation
 	// where user defined values have more precedence over builtin types
+	case *object.Builtin:
+		return fn.Fn(left)
 
 	case *object.Function:
 		extendedEnv := extendFunctionEnv(fn, args)
